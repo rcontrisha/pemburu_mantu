@@ -44,6 +44,7 @@ class _LoginPageState extends State<LoginPage> {
             context,
             MaterialPageRoute(builder: (context) => CustHomeScreen()),
           );
+          
         } else if (role == "Wedding Organizer") {
           // Jika role adalah Wedding Organizer
           Navigator.push(

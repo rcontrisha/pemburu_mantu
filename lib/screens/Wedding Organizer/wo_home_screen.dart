@@ -2,9 +2,11 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:intl/intl.dart';
 import 'package:pemburu_mantu/services/api_services.dart';
 import 'package:pemburu_mantu/widgets/wo_sidebar.dart';
-import 'package:google_fonts/google_fonts.dart'; // Impor google_fonts
+import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart'; // Impor google_fonts
 
 class HomeWOPage extends StatefulWidget {
   @override
@@ -14,12 +16,49 @@ class HomeWOPage extends StatefulWidget {
 class _HomeWOPageState extends State<HomeWOPage> {
   // This will trigger the FutureBuilder to reload and show the updated data
   Future<List<Map<String, dynamic>>>? _productsFuture;
+  String selectedCurrency = 'IDR'; // Default currency
+  final Map<String, double> exchangeRates = {
+    'IDR': 1.0, // 1 IDR
+    'USD': 0.000067, // Contoh: 1 IDR = 0.000067 USD
+    'JPY': 0.0073, // Contoh: 1 IDR = 0.0073 JPY
+    'RM': 0.00031, // Contoh: 1 IDR = 0.00031 RM
+    'SGD': 0.00009, // Contoh: 1 IDR = 0.00009 SGD
+  };
 
   @override
   void initState() {
     super.initState();
+    loadPreferences();
     _productsFuture =
         ApiService.getProductsForWO(); // Initialize future to load products
+  }
+
+  // Load timezone and currency from SharedPreferences
+  Future<void> loadPreferences() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    setState(() {
+      selectedCurrency =
+          prefs.getString('currency') ?? 'IDR'; // Default currency
+    });
+  }
+
+  void updateCurrency(String currency) {
+    setState(() {
+      selectedCurrency = currency;
+    });
+  }
+
+  double convertCurrency(double amount) {
+    return (amount * exchangeRates[selectedCurrency]!).toDouble();
+  }
+
+  String formatCurrency(double amount) {
+    final NumberFormat currencyFormat = NumberFormat.currency(
+      locale: 'id_ID',
+      symbol: '',
+      decimalDigits: 2,
+    );
+    return currencyFormat.format(convertCurrency(amount));
   }
 
   @override
@@ -51,6 +90,9 @@ class _HomeWOPageState extends State<HomeWOPage> {
                         itemCount: products.length,
                         itemBuilder: (context, index) {
                           final product = products[index];
+                          final price = double.tryParse(
+                                  product['produk_price'].toString()) ??
+                              0.0;
                           return Container(
                             width: double
                                 .infinity, // Menetapkan lebar penuh halaman
@@ -77,7 +119,7 @@ class _HomeWOPageState extends State<HomeWOPage> {
                                     topRight: Radius.circular(12),
                                   ),
                                   child: Image.network(
-                                    "http://192.168.1.26:8000${product['image_path']}" ??
+                                    "http://192.168.1.6:8000${product['image_path']}" ??
                                         'https://via.placeholder.com/150',
                                     width: double.infinity,
                                     height: 150,
@@ -102,7 +144,7 @@ class _HomeWOPageState extends State<HomeWOPage> {
                                       SizedBox(height: 5),
                                       // Harga Produk
                                       Text(
-                                        'IDR ${product['produk_price']}',
+                                        '${selectedCurrency} ${formatCurrency(price) ?? 'No price available'}',
                                         style: GoogleFonts.nunito(
                                           fontSize: 18,
                                           fontWeight: FontWeight.w700,
@@ -340,7 +382,7 @@ class _EditProductDialogState extends State<EditProductDialog> {
                 controller: _priceController,
                 style: TextStyle(color: Colors.white),
                 decoration: InputDecoration(
-                  labelText: 'Price',
+                  labelText: 'Price (in IDR)',
                   labelStyle: TextStyle(color: Colors.white),
                   filled: true,
                   fillColor: Color(0xFF1E1E2D),

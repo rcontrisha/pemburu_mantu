@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pemburu_mantu/services/api_services.dart';
 
 class CustSidebar extends StatefulWidget {
@@ -11,11 +12,15 @@ class _CustSidebarState extends State<CustSidebar> {
   static final storage = FlutterSecureStorage();
   bool isProfileExpanded = false;
   String userName = 'Loading...'; // Default value until the name is fetched
+  String selectedTimeZone = 'WIB'; // Default timezone
+  String selectedCurrency = 'IDR';
 
   @override
   void initState() {
     super.initState();
     loadUserName(); // Call the function to load the username
+    loadTimeZone(); // Load the saved timezone
+    loadCurrency();
   }
 
   // Load the username asynchronously
@@ -24,6 +29,53 @@ class _CustSidebarState extends State<CustSidebar> {
     setState(() {
       userName = name ?? 'User'; // Default to 'User' if name is not found
     });
+  }
+
+  // Load timezone from SharedPreferences
+  Future<void> loadTimeZone() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    setState(() {
+      selectedTimeZone =
+          prefs.getString('time_zone') ?? 'WIB'; // Default timezone
+    });
+  }
+
+  // Save timezone to SharedPreferences
+  Future<void> saveTimeZone(String timeZone) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setString('time_zone', timeZone);
+    setState(() {
+      selectedTimeZone = timeZone;
+    });
+  }
+
+  // Load currency from SharedPreferences
+  Future<void> loadCurrency() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? loadedCurrency = prefs.getString('currency');
+
+    setState(() {
+      // If loadedCurrency is null, default to 'IDR'
+      selectedCurrency =
+          ['IDR', 'USD', 'JPY', 'RM', 'SGD'].contains(loadedCurrency)
+              ? loadedCurrency! // Use valid loaded value
+              : 'IDR'; // Default to 'IDR'
+    });
+
+    // Debugging print
+    print('Selected currency: $selectedCurrency');
+  }
+
+  // Save currency to SharedPreferences
+  Future<void> saveCurrency(String currency) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setString('currency', currency);
+    setState(() {
+      selectedCurrency = currency; // Update the UI immediately
+    });
+
+    // Debugging print
+    print('Currency saved: $currency');
   }
 
   @override
@@ -35,18 +87,75 @@ class _CustSidebarState extends State<CustSidebar> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Profile Section
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Row(
-                children: [
-                  CircleAvatar(
+            // Time Zone Dropdown in the top-right corner
+            Row(
+              crossAxisAlignment: CrossAxisAlignment
+                  .start, // Pastikan elemen sejajar di bagian atas
+              mainAxisAlignment: MainAxisAlignment
+                  .spaceBetween, // Pisahkan elemen ke kiri dan kanan
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: CircleAvatar(
                     radius: 45,
                     backgroundImage: AssetImage('assets/logo.png'),
                   ),
-                ],
-              ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(
+                      right: 20), // Top untuk mengatur posisi dropdown
+                  child: Column(
+                    children: [
+                      DropdownButton<String>(
+                        dropdownColor: Color(0xFF2A2A3D),
+                        value: ['WIB', 'WITA', 'WIT', 'London']
+                                .contains(selectedTimeZone)
+                            ? selectedTimeZone
+                            : 'WIB', // Default jika nilai tidak valid
+                        icon: Icon(Icons.arrow_drop_down, color: Colors.white),
+                        style: TextStyle(color: Colors.white, fontSize: 16),
+                        underline: Container(height: 0), // Hilangkan underline
+                        items: ['WIB', 'WITA', 'WIT', 'London']
+                            .map((String value) {
+                          return DropdownMenuItem<String>(
+                            value: value,
+                            child: Text(value),
+                          );
+                        }).toList(),
+                        onChanged: (String? newValue) {
+                          if (newValue != null) {
+                            saveTimeZone(newValue); // Simpan zona waktu
+                          }
+                        },
+                      ),
+                      DropdownButton<String>(
+                        dropdownColor: Color(0xFF2A2A3D),
+                        value: ['IDR', 'USD', 'JPY', 'RM', 'SGD']
+                                .contains(selectedCurrency)
+                            ? selectedCurrency
+                            : 'IDR', // Default jika nilai tidak valid
+                        icon: Icon(Icons.arrow_drop_down, color: Colors.white),
+                        style: TextStyle(color: Colors.white, fontSize: 16),
+                        underline: Container(height: 0), // Hilangkan underline
+                        items: ['IDR', 'USD', 'JPY', 'RM', 'SGD']
+                            .map((String value) {
+                          return DropdownMenuItem<String>(
+                            value: value,
+                            child: Text(value),
+                          );
+                        }).toList(),
+                        onChanged: (String? newValue) {
+                          if (newValue != null) {
+                            saveCurrency(newValue); // Simpan mata uang
+                          }
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
+
             SizedBox(height: 40),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -80,7 +189,7 @@ class _CustSidebarState extends State<CustSidebar> {
             ),
             SidebarItem(
               icon: Icons.grid_view,
-              title: 'Pesananan Saya',
+              title: 'Pesanan Saya',
               onTap: () => Navigator.pushNamed(context, '/pesananSaya'),
             ),
             SizedBox(height: 20),

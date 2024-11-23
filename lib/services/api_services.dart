@@ -6,7 +6,7 @@ import 'package:http_parser/http_parser.dart';
 import 'package:mime/mime.dart'; // To get the mime type of the file
 
 class ApiService {
-  static const String baseUrl = 'http://192.168.1.26:8000/api';
+  static const String baseUrl = 'http://192.168.1.6:8000/api';
   static final storage = FlutterSecureStorage();
 
   // Login function with email verification check
