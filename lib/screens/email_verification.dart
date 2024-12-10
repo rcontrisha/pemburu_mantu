@@ -98,7 +98,7 @@ class _EmailVerificationPageState extends State<EmailVerificationPage> {
               CircleAvatar(
                 radius: 60,
                 backgroundImage: AssetImage(
-                    'assets/logo.png'), // Replace with your image path
+                    'assets/app_icon.png'), // Replace with your image path
               ),
               SizedBox(height: 40),
               Container(

@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:intl/intl.dart';
 import 'package:pemburu_mantu/services/api_services.dart';
 import 'package:pemburu_mantu/widgets/cust_sidebar.dart';
-import 'package:pemburu_mantu/widgets/wo_sidebar.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:shared_preferences/shared_preferences.dart'; // Impor google_fonts
+import 'package:shared_preferences/shared_preferences.dart';
 
 class CustHomeScreen extends StatefulWidget {
   @override
@@ -22,12 +22,34 @@ class _CustHomeScreenState extends State<CustHomeScreen> {
     'SGD': 0.00009, // Contoh: 1 IDR = 0.00009 SGD
   };
 
+  // Initialize flutterLocalNotificationsPlugin
+  FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+      FlutterLocalNotificationsPlugin();
+
   @override
   void initState() {
     super.initState();
     loadPreferences();
+    initializeNotifications();
+    createNotificationChannel();
     _productsFuture =
         ApiService.getAllProducts(); // Initialize future to load products
+  }
+
+  Future<void> initializeNotifications() async {
+    const initializationSettingsAndroid =
+        AndroidInitializationSettings('app_icon_1');
+    const initializationSettings = InitializationSettings(
+      android: initializationSettingsAndroid,
+    );
+
+    await flutterLocalNotificationsPlugin.initialize(
+      initializationSettings,
+      onDidReceiveNotificationResponse: (response) {
+        // Callback jika notifikasi ditekan
+        debugPrint('Notification payload: ${response.payload}');
+      },
+    );
   }
 
   // Load timezone and currency from SharedPreferences
@@ -113,7 +135,7 @@ class _CustHomeScreenState extends State<CustHomeScreen> {
                                     topRight: Radius.circular(12),
                                   ),
                                   child: Image.network(
-                                    "http://192.168.1.6:8000${product['image_path']}" ??
+                                    "http://192.168.1.17:8000${product['image_path']}" ??
                                         'https://via.placeholder.com/150',
                                     width: double.infinity,
                                     height: 150,
@@ -160,8 +182,9 @@ class _CustHomeScreenState extends State<CustHomeScreen> {
                                               context: context,
                                               builder: (BuildContext context) {
                                                 return OrderDialog(
-                                                  product:
-                                                      product, // Kirim data produk ke dialog
+                                                  product: product,
+                                                  flutterLocalNotificationsPlugin:
+                                                      flutterLocalNotificationsPlugin, // Pass it here
                                                 );
                                               },
                                             );
@@ -198,12 +221,42 @@ class _CustHomeScreenState extends State<CustHomeScreen> {
       ),
     );
   }
+
+  void createNotificationChannel() async {
+    const AndroidNotificationChannel channel = AndroidNotificationChannel(
+      'order_channel_id', // ID unik channel
+      'Order Notifications', // Nama channel
+      description: 'Notifikasi terkait pesanan',
+      importance: Importance.high,
+    );
+
+    final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+        FlutterLocalNotificationsPlugin();
+
+    final AndroidNotificationDetails androidDetails =
+        AndroidNotificationDetails(
+      channel.id,
+      channel.name,
+      channelDescription: channel.description,
+      importance: Importance.high,
+      priority: Priority.high,
+    );
+
+    flutterLocalNotificationsPlugin
+        .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>()
+        ?.createNotificationChannel(channel);
+  }
 }
 
 class OrderDialog extends StatefulWidget {
   final Map<String, dynamic> product;
+  final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin;
 
-  OrderDialog({required this.product});
+  OrderDialog({
+    required this.product,
+    required this.flutterLocalNotificationsPlugin,
+  });
 
   @override
   _OrderDialogState createState() => _OrderDialogState();
@@ -354,6 +407,7 @@ class _OrderDialogState extends State<OrderDialog> {
                   SnackBar(content: Text('Order created successfully!')),
                 );
                 Navigator.of(context).pop();
+                _showNotification();
               }).catchError((error) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(content: Text('Failed to create order: $error')),
@@ -368,5 +422,29 @@ class _OrderDialogState extends State<OrderDialog> {
         ),
       ],
     );
+  }
+
+  // Fungsi untuk menampilkan notifikasi lokal
+  void _showNotification() async {
+    const androidDetails = AndroidNotificationDetails(
+      'order_channel_id', // ID unik untuk saluran
+      'Order Notifications', // Nama saluran
+      channelDescription: 'Notifikasi untuk pesanan.',
+      importance: Importance.high,
+      priority: Priority.high,
+    );
+
+    const notificationDetails = NotificationDetails(android: androidDetails);
+
+    try {
+      await widget.flutterLocalNotificationsPlugin.show(
+        1, // ID notifikasi
+        'Pesanan Berhasil!',
+        'Pesanan kamu telah berhasil dibuat. Silakan menunggu konfirmasi.',
+        notificationDetails,
+      );
+    } catch (e) {
+      print('Error saat menampilkan notifikasi: $e');
+    }
   }
 }

@@ -146,7 +146,7 @@ class _WoOrderScreenState extends State<WoOrderScreen> {
                                     topRight: Radius.circular(12),
                                   ),
                                   child: Image.network(
-                                    "http://192.168.1.6:8000${order['image']['image_path']}" ??
+                                    "http://192.168.1.17:8000${order['image']['image_path']}" ??
                                         'https://via.placeholder.com/150',
                                     width: double.infinity,
                                     height: 150,

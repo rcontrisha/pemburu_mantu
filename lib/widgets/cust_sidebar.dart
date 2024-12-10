@@ -98,7 +98,7 @@ class _CustSidebarState extends State<CustSidebar> {
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: CircleAvatar(
                     radius: 45,
-                    backgroundImage: AssetImage('assets/logo.png'),
+                    backgroundImage: AssetImage('assets/app_icon.png'),
                   ),
                 ),
                 Padding(

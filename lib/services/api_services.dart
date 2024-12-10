@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:image_picker/image_picker.dart';
@@ -6,7 +7,7 @@ import 'package:http_parser/http_parser.dart';
 import 'package:mime/mime.dart'; // To get the mime type of the file
 
 class ApiService {
-  static const String baseUrl = 'http://192.168.1.6:8000/api';
+  static const String baseUrl = 'http://192.168.1.17:8000/api';
   static final storage = FlutterSecureStorage();
 
   // Login function with email verification check
@@ -497,6 +498,53 @@ class ApiService {
 
     if (response.statusCode != 201) {
       throw Exception('Failed to create order');
+    }
+  }
+
+  Future<Map<String, dynamic>> updateProfilePhoto({required File photo}) async {
+    try {
+      // API URL
+      final url = Uri.parse("$baseUrl/profile-photo");
+      final token = await storage.read(key: 'token');
+      if (token == null) {
+        throw Exception('No token found');
+      }
+
+      // Membuat request multipart
+      var request = http.MultipartRequest("POST", url);
+      request.headers['Authorization'] = 'Bearer $token';
+      request.files.add(
+        await http.MultipartFile.fromPath(
+          'photo',
+          photo.path,
+          contentType:
+              MediaType('image', 'jpeg'), // Sesuaikan jika formatnya lain
+        ),
+      );
+
+      // Kirim request
+      var response = await request.send();
+
+      // Cek status code
+      if (response.statusCode == 200) {
+        // Parsing response
+        final respStr = await response.stream.bytesToString();
+        return {
+          "success": true,
+          "data": json.decode(respStr),
+        };
+      } else {
+        return {
+          "success": false,
+          "message": "Failed to update photo.",
+          "statusCode": response.statusCode,
+        };
+      }
+    } catch (e) {
+      return {
+        "success": false,
+        "message": e.toString(),
+      };
     }
   }
 

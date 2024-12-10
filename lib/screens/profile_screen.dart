@@ -1,5 +1,8 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:pemburu_mantu/services/api_services.dart';
 import 'package:pemburu_mantu/widgets/cust_sidebar.dart';
 import 'package:pemburu_mantu/widgets/wo_sidebar.dart';
@@ -14,6 +17,7 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   final ApiService _apiService = ApiService();
   static final storage = FlutterSecureStorage();
+  final ImagePicker _imagePicker = ImagePicker();
 
   // Form field controllers
   final TextEditingController _nameController = TextEditingController();
@@ -25,6 +29,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final TextEditingController _newPasswordController = TextEditingController();
   final TextEditingController _confirmPasswordController =
       TextEditingController();
+
+  // Foto profil
+  String? _profilePhotoUrl;
+  File? _selectedPhoto;
+  final String baseUrl = 'http://192.168.1.17:8000/storage/';
 
   // Loading state
   bool _isLoading = false;
@@ -45,6 +54,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       final profile = await _apiService.getUserProfile();
       _nameController.text = profile['data']['name'] ?? '';
       _emailController.text = profile['data']['email'] ?? '';
+      _profilePhotoUrl = profile['data']['photo'];
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Failed to load profile: $e')),
@@ -53,6 +63,44 @@ class _ProfileScreenState extends State<ProfileScreen> {
       setState(() {
         _isLoading = false;
       });
+    }
+  }
+
+  // Update profile photo
+  Future<void> _updateProfilePhoto() async {
+    if (_selectedPhoto == null) return;
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      await _apiService.updateProfilePhoto(
+          photo: _selectedPhoto!); // Perbaikan di sini
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Profile photo updated successfully')),
+      );
+      _fetchProfileData(); // Refresh profile data
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to update photo: $e')),
+      );
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  // Pick photo
+  Future<void> _pickPhoto() async {
+    final pickedFile =
+        await _imagePicker.pickImage(source: ImageSource.gallery);
+    if (pickedFile != null) {
+      setState(() {
+        _selectedPhoto = File(pickedFile.path);
+      });
+      _updateProfilePhoto();
     }
   }
 
@@ -146,8 +194,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 : SingleChildScrollView(
                     padding: const EdgeInsets.all(16),
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
+                        GestureDetector(
+                          onTap: _pickPhoto,
+                          child: CircleAvatar(
+                            radius: 50,
+                            backgroundImage: _selectedPhoto != null
+                                ? FileImage(_selectedPhoto!)
+                                : (_profilePhotoUrl != null
+                                        ? NetworkImage(
+                                            '$baseUrl${_profilePhotoUrl}'!)
+                                        : AssetImage(
+                                            'assets/default_avatar.png'))
+                                    as ImageProvider,
+                            child: _selectedPhoto == null &&
+                                    _profilePhotoUrl == null
+                                ? const Icon(Icons.camera_alt, size: 30)
+                                : null,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
                         const SectionHeader(title: "Profile Information"),
                         ProfileFormField(
                           label: "Name",

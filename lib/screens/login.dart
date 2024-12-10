@@ -44,7 +44,6 @@ class _LoginPageState extends State<LoginPage> {
             context,
             MaterialPageRoute(builder: (context) => CustHomeScreen()),
           );
-          
         } else if (role == "Wedding Organizer") {
           // Jika role adalah Wedding Organizer
           Navigator.push(
@@ -93,7 +92,7 @@ class _LoginPageState extends State<LoginPage> {
               CircleAvatar(
                 radius: 60,
                 backgroundImage: AssetImage(
-                    'assets/logo.png'), // Replace with your image path
+                    'assets/app_icon.png'), // Replace with your image path
               ),
               SizedBox(height: 40),
               Container(
